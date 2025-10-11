@@ -1,0 +1,26 @@
+# Byte-compiled / cache
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+
+# Environments
+.env
+.venv/
+env/
+venv/
+
+# Data / models
+*.joblib
+*.pkl
+*.csv
+*.xlsx
+
+# Streamlit / Hugging Face cache
+.streamlit/
+huggingface/
+audio_responses/
+
+# OS files
+.DS_Store
+Thumbs.db

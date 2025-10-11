@@ -1,0 +1,27 @@
+# Core Framework
+fastapi
+uvicorn
+
+# Environment Management
+python-dotenv
+
+# APIs & Networking
+requests
+groq
+google-generativeai
+
+# Data Handling
+pandas
+numpy
+
+# Speech Processing
+gTTS
+SpeechRecognition
+pydub
+
+# Optional Utilities
+typing-extensions
+
+python-multipart
+pydantic
+streamlit
