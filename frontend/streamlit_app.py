@@ -18,7 +18,7 @@ st.set_page_config(
     layout="wide"
 )
 
-st.title("🌾 Farmwise AI – Your Agricultural AI Assistant")
+st.title("🌾 Farmwise AI – Your Financial Assistant")
 
 # --- Supported languages ---
 LANG_OPTIONS = [
