@@ -25,3 +25,4 @@ typing-extensions
 python-multipart
 pydantic
 streamlit
+edge-tts
