@@ -14,7 +14,7 @@ from utils.intent_classifier import classify_intent
 from utils.data_model import get_personalized_response
 from utils.memory_manager import remember_message, get_conversation_context
 from utils.logger import log_interaction
-import os
+import joblib
 import pickle
 import pandas as pd
 import random
@@ -29,9 +29,10 @@ app = FastAPI(
 )
 
 # --- Serve static audio directory ---
-if not os.path.exists("audio_responses"):
-    os.makedirs("audio_responses")
-app.mount("/audio_responses", StaticFiles(directory="audio_responses"), name="audio_responses")
+AUDIO_DIR = os.path.join(os.path.dirname(__file__), "audio_responses")
+if not os.path.exists(AUDIO_DIR):
+    os.makedirs(AUDIO_DIR)
+app.mount("/audio_responses", StaticFiles(directory=AUDIO_DIR), name="audio_responses")
 
 
 @app.get("/")
@@ -146,19 +147,13 @@ TOPIC_KEYS = list(TOPIC_DESCRIPTIONS.keys())
 def get_tip_nlp(user_input: str, lang: str) -> str:
     """Generate a multilingual financial tip based on message topic and detected language."""
     try:
-        # Normalize language code (en → english)
         normalized_lang = normalize_language(lang)
-
-        # Match message to topic using cosine similarity
         user_vec = vectorizer.transform([user_input])
         similarities = cosine_similarity(user_vec, topic_matrix)
         best_idx = similarities.argmax()
         best_topic = TOPIC_KEYS[best_idx]
-
-        # Select localized tip
         tips_for_topic = TIPS.get(best_topic, TIPS["general"])
         return random.choice(tips_for_topic.get(normalized_lang, tips_for_topic["english"]))
-
     except Exception as e:
         print(f"⚠️ get_tip_nlp error: {e}")
         return random.choice(TIPS["general"]["english"])
@@ -192,8 +187,6 @@ async def process_message(user_text: str, user_id: str = "guest", lang_hint: Opt
             audio_url = None
 
         log_interaction(user_text, full_response, language=response_lang, intent=intent)
-
-        # --- NLP-based financial tip ---
         tip = get_tip_nlp(user_text, lang=response_lang)
 
         return {
@@ -259,18 +252,21 @@ async def chat_text(req: ChatRequest):
 
 
 # --- HDI CATEGORY PREDICTION MODEL INTEGRATION ---
-MODEL_PATH = "models/hdi_expected_features.pkl"
-if os.path.exists(MODEL_PATH):
+model_path = os.path.join(os.path.dirname(__file__), "models", "hdi_classifier.pkl")
+
+hdi_model = None
+if os.path.exists(model_path):
     try:
-        with open(MODEL_PATH, "rb") as f:
-            hdi_model = pickle.load(f)
-        print("✅ HDI model loaded successfully.")
+        try:
+            hdi_model = joblib.load(model_path)
+        except Exception:
+            with open(model_path, "rb") as f:
+                hdi_model = pickle.load(f)
+        print("✅ HDI model loaded successfully from:", model_path)
     except Exception as e:
-        hdi_model = None
         print(f"⚠️ Failed to load HDI model: {e}")
 else:
-    hdi_model = None
-    print("⚠️ HDI model not found. Make sure 'models/hdi_classifier.pkl' exists.")
+    print(f"⚠️ HDI model not found at {model_path}. Please ensure the file exists in backend/models.")
 
 
 EXPECTED_FEATURES = [

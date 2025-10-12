@@ -9,7 +9,7 @@ from dotenv import load_dotenv
 
 # --- Load environment variables ---
 load_dotenv()
-BACKEND_URL = os.getenv("BACKEND_URL", "http://127.0.0.1:8000")
+BACKEND_URL = os.getenv("BACKEND_URL", "https://farmwise-ai.onrender.com")  
 
 # --- Page configuration ---
 st.set_page_config(
@@ -18,7 +18,7 @@ st.set_page_config(
     layout="wide"
 )
 
-st.title("💰 Farmwise AI – Your Financial Assistant")
+st.title("💰 Farmwise AI – Your Agricultural AI Assistant")
 
 # --- Supported languages ---
 LANG_OPTIONS = [
@@ -38,11 +38,14 @@ if "selected_lang" not in st.session_state:
 if "last_audio" not in st.session_state:
     st.session_state["last_audio"] = None
 
-# --- Load your ML model silently ---
+# --- Load your ML model (no local hardcoding) ---
 @st.cache_resource
 def load_model():
     try:
-        model_path = "C:/Users/HP/Documents/Farmwise_AI/backend/models/hdi_expected_features.pkl"
+        model_path = os.path.join("backend", "models", "hdi_expected_features.pkl")
+        if not os.path.exists(model_path):
+            st.warning("⚠️ Model file not found in /backend/models/.")
+            return None
         model = joblib.load(model_path)
         return model
     except Exception as e:
@@ -66,6 +69,7 @@ st.markdown("---")
 
 # --- Backend communication ---
 def call_voice_chat(file=None, text_override=None, lang: str = None):
+    """Send voice or text input to backend for AI response + audio."""
     try:
         data = {"user_id": "guest"}
         if lang:
@@ -92,18 +96,23 @@ def call_voice_chat(file=None, text_override=None, lang: str = None):
 def append_chat(user_text, ai_response, tip=None, audio_url=None, detected_language=None):
     timestamp = datetime.now().strftime("%H:%M:%S")
     detected_language = detected_language.capitalize() if detected_language else ""
+    full_audio_url = None
+
+    if audio_url:
+        if audio_url.startswith("http"):
+            full_audio_url = audio_url
+        else:
+            full_audio_url = f"{BACKEND_URL.rstrip('/')}/{audio_url.lstrip('/')}"
+
     st.session_state["chat_history"].append({
         "user_text": user_text,
         "ai_response": ai_response,
         "tip": tip,
-        "audio_url": audio_url,
+        "audio_url": full_audio_url,
         "timestamp": timestamp,
         "detected_language": detected_language
     })
-    if audio_url:
-        st.session_state["last_audio"] = f"{BACKEND_URL}/{audio_url.replace('\\\\', '/')}"
-    else:
-        st.session_state["last_audio"] = None
+    st.session_state["last_audio"] = full_audio_url
 
 
 # --- Render chat bubbles ---
@@ -125,8 +134,7 @@ def render_chat():
         )
         audio_html = ""
         if msg["audio_url"]:
-            audio_src = f"{BACKEND_URL}/{msg['audio_url'].replace('\\\\','/')}"
-            audio_html = f"<br>🔊 <audio controls src='{audio_src}'></audio>"
+            audio_html = f"<br>🔊 <audio controls src='{msg['audio_url']}'></audio>"
 
         tip_html = ""
         if msg.get("tip"):
@@ -140,7 +148,7 @@ def render_chat():
         )
 
 
-# --- Main chat display ---
+# --- Chat container ---
 chat_container = st.container()
 with chat_container:
     st.markdown("### 💬 Conversation")
@@ -148,7 +156,7 @@ with chat_container:
     st.markdown("<div style='height:100px;'></div>", unsafe_allow_html=True)
 
 
-# --- Fixed bottom input bar ---
+# --- Input UI ---
 st.markdown("""
 <style>
 .bottom-input {
@@ -166,7 +174,6 @@ st.markdown("""
 
 st.markdown('<div class="bottom-input">', unsafe_allow_html=True)
 
-# --- Input fields ---
 text_input = st.text_input("💬 Type your message...", key="user_text_input", label_visibility="collapsed")
 audio_input = st.audio_input("🎤 Or record a message")
 
@@ -176,7 +183,7 @@ with col1:
 with col2:
     replay_btn = st.button("Replay last audio", use_container_width=True)
 
-# --- Voice Chat Handling ---
+# --- Send message ---
 if send_btn:
     with st.spinner("💭 Processing..."):
         lang_code = st.session_state.get("selected_lang")
@@ -201,22 +208,20 @@ if send_btn:
             audio_url = data.get("audio_url")
             detected_lang = data.get("detected_language")
 
-            # Example: Use your background model silently
+            # Optional: Background model prediction
             if model is not None:
-                # Example dummy features — replace with your actual schema extraction logic
-                features = np.random.rand(4).reshape(1, -1)
                 try:
+                    features = np.random.rand(4).reshape(1, -1)
                     prediction = model.predict(features)[0]
                     ai_response += f"\n\n📊 [Model insight: {prediction:.3f}]"
                 except Exception as e:
                     st.warning(f"Model prediction failed: {e}")
 
             append_chat(user_text, ai_response, tip=tip, audio_url=audio_url, detected_language=detected_lang)
-
             st.session_state.pop("user_text_input", None)
             st.rerun()
 
-# --- Replay previous audio ---
+# --- Replay audio ---
 if replay_btn:
     if st.session_state.get("last_audio"):
         st.audio(st.session_state["last_audio"], format="audio/mp3")
