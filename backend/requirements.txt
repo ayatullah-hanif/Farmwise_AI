@@ -27,3 +27,5 @@ pydantic
 streamlit
 edge-tts
 langdetect
+
+scikit-learn
