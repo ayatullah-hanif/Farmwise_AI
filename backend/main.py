@@ -1,16 +1,19 @@
+import sys, os
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+
 from fastapi import FastAPI, UploadFile, Form
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from typing import Optional
 from fastapi.staticfiles import StaticFiles
-from intent_response import get_intent_response
-from speech_to_text import convert_speech_to_text
-from text_to_speech import convert_text_to_speech
-from language_utils import detect_language
-from intent_classifier import classify_intent
-from data_model import get_personalized_response
-from memory_manager import remember_message, get_conversation_context
-from logger import log_interaction
+from utils.intent_response import get_intent_response
+from utils.speech_to_text import convert_speech_to_text
+from utils.text_to_speech import convert_text_to_speech
+from utils.language_utils import detect_language
+from utils.intent_classifier import classify_intent
+from utils.data_model import get_personalized_response
+from utils.memory_manager import remember_message, get_conversation_context
+from utils.logger import log_interaction
 import os
 import pickle
 import pandas as pd
