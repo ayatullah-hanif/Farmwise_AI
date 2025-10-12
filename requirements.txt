@@ -11,3 +11,4 @@ pandas
 # Speech Processing (if you allow local TTS)
 gTTS
 pydub
+dotenv
