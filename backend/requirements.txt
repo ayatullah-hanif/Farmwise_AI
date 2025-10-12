@@ -29,3 +29,5 @@ edge-tts
 langdetect
 
 scikit-learn
+joblib
+requests
