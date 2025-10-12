@@ -259,7 +259,7 @@ async def chat_text(req: ChatRequest):
 
 
 # --- HDI CATEGORY PREDICTION MODEL INTEGRATION ---
-MODEL_PATH = "models/hdi_classifier.pkl"
+MODEL_PATH = "models/hdi_expected_features.pkl"
 if os.path.exists(MODEL_PATH):
     try:
         with open(MODEL_PATH, "rb") as f:
