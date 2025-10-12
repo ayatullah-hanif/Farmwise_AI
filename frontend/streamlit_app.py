@@ -14,11 +14,11 @@ BACKEND_URL = os.getenv("BACKEND_URL", "https://farmwise-ai.onrender.com")
 # --- Page configuration ---
 st.set_page_config(
     page_title="💬 FARMWISE AI",
-    page_icon="💰",
+    page_icon="🌾",
     layout="wide"
 )
 
-st.title("💰 Farmwise AI – Your Agricultural AI Assistant")
+st.title("🌾 Farmwise AI – Your Agricultural AI Assistant")
 
 # --- Supported languages ---
 LANG_OPTIONS = [
@@ -30,7 +30,7 @@ LANG_OPTIONS = [
     ("Twi", "twi")
 ]
 
-# --- Initialize session state ---
+# --- Session state ---
 if "chat_history" not in st.session_state:
     st.session_state["chat_history"] = []
 if "selected_lang" not in st.session_state:
@@ -38,21 +38,20 @@ if "selected_lang" not in st.session_state:
 if "last_audio" not in st.session_state:
     st.session_state["last_audio"] = None
 
-# --- Load your ML model (no local hardcoding) ---
+
+# --- Load model silently (no UI warnings) ---
 @st.cache_resource
-def load_model():
+def load_model_silently():
     try:
         model_path = os.path.join("backend", "models", "hdi_expected_features.pkl")
-        if not os.path.exists(model_path):
-            st.warning("⚠️ Model file not found in /backend/models/.")
-            return None
-        model = joblib.load(model_path)
-        return model
-    except Exception as e:
-        st.error(f"⚠️ Could not load model: {e}")
-        return None
+        if os.path.exists(model_path):
+            return joblib.load(model_path)
+    except Exception:
+        pass
+    return None  # just skip silently
 
-model = load_model()
+model = load_model_silently()
+
 
 # --- Language selector ---
 st.markdown("**Language / Èdè — Select or use Auto-detect**")
@@ -67,9 +66,9 @@ st.session_state["selected_lang"] = selected_code
 
 st.markdown("---")
 
+
 # --- Backend communication ---
 def call_voice_chat(file=None, text_override=None, lang: str = None):
-    """Send voice or text input to backend for AI response + audio."""
     try:
         data = {"user_id": "guest"}
         if lang:
@@ -81,7 +80,6 @@ def call_voice_chat(file=None, text_override=None, lang: str = None):
         elif file:
             files = {"file": file}
         else:
-            st.error("No input provided.")
             return None
 
         response = requests.post(f"{BACKEND_URL}/voice_chat/", files=files, data=data, timeout=90)
@@ -92,7 +90,7 @@ def call_voice_chat(file=None, text_override=None, lang: str = None):
         return None
 
 
-# --- Append to chat history ---
+# --- Chat rendering ---
 def append_chat(user_text, ai_response, tip=None, audio_url=None, detected_language=None):
     timestamp = datetime.now().strftime("%H:%M:%S")
     detected_language = detected_language.capitalize() if detected_language else ""
@@ -115,18 +113,15 @@ def append_chat(user_text, ai_response, tip=None, audio_url=None, detected_langu
     st.session_state["last_audio"] = full_audio_url
 
 
-# --- Render chat bubbles ---
 def render_chat():
     for msg in st.session_state["chat_history"]:
         detected = msg.get("detected_language") or ""
-        # User bubble
         st.markdown(
             f"<div style='background-color:#4a90e2; color:white; padding:10px; border-radius:10px; "
             f"max-width:80%; margin-left:auto; margin-bottom:5px;'>"
             f"<b>You [{msg['timestamp']}]:</b> {msg['user_text']}</div>",
             unsafe_allow_html=True
         )
-        # AI bubble
         lang_badge = (
             f"<span style='font-size:12px; color:#fff; background:#00796b; padding:2px 6px; border-radius:6px;'>"
             f"Detected: {detected}</span>"
@@ -135,7 +130,6 @@ def render_chat():
         audio_html = ""
         if msg["audio_url"]:
             audio_html = f"<br>🔊 <audio controls src='{msg['audio_url']}'></audio>"
-
         tip_html = ""
         if msg.get("tip"):
             tip_html = f"<br><i style='color:#ffeb3b;'>💡 Tip: {msg['tip']}</i>"
@@ -156,7 +150,7 @@ with chat_container:
     st.markdown("<div style='height:100px;'></div>", unsafe_allow_html=True)
 
 
-# --- Input UI ---
+# --- Bottom input bar ---
 st.markdown("""
 <style>
 .bottom-input {
@@ -171,7 +165,6 @@ st.markdown("""
 }
 </style>
 """, unsafe_allow_html=True)
-
 st.markdown('<div class="bottom-input">', unsafe_allow_html=True)
 
 text_input = st.text_input("💬 Type your message...", key="user_text_input", label_visibility="collapsed")
@@ -182,6 +175,7 @@ with col1:
     send_btn = st.button("Send", use_container_width=True)
 with col2:
     replay_btn = st.button("Replay last audio", use_container_width=True)
+
 
 # --- Send message ---
 if send_btn:
@@ -208,20 +202,20 @@ if send_btn:
             audio_url = data.get("audio_url")
             detected_lang = data.get("detected_language")
 
-            # Optional: Background model prediction
+            # Background model (silent)
             if model is not None:
                 try:
                     features = np.random.rand(4).reshape(1, -1)
                     prediction = model.predict(features)[0]
                     ai_response += f"\n\n📊 [Model insight: {prediction:.3f}]"
-                except Exception as e:
-                    st.warning(f"Model prediction failed: {e}")
+                except Exception:
+                    pass  # no UI message shown
 
             append_chat(user_text, ai_response, tip=tip, audio_url=audio_url, detected_language=detected_lang)
             st.session_state.pop("user_text_input", None)
             st.rerun()
 
-# --- Replay audio ---
+# --- Replay last audio ---
 if replay_btn:
     if st.session_state.get("last_audio"):
         st.audio(st.session_state["last_audio"], format="audio/mp3")
