@@ -42,7 +42,7 @@ if "last_audio" not in st.session_state:
 @st.cache_resource
 def load_model():
     try:
-        model_path = "C:/Users/HP/Documents/fam_lens_ai_assistant/models/hdi_expected_features.pkl"
+        model_path = "C:/Users/HP/Documents/Farmwise_AI/backend/models/hdi_expected_features.pkl"
         model = joblib.load(model_path)
         return model
     except Exception as e:
