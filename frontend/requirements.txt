@@ -12,3 +12,4 @@ pandas
 gTTS
 pydub
 dotenv
+joblib
