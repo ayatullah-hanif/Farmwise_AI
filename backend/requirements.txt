@@ -26,3 +26,4 @@ python-multipart
 pydantic
 streamlit
 edge-tts
+langdetect
